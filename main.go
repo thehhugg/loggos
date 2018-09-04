@@ -13,6 +13,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/olivere/elastic"
 )
 
 type Block struct {
@@ -45,7 +46,7 @@ func main() {
 
 }
 
-/* Calculate new hash: concat block inputs & hash, return hash as string */
+// Calculate new hash: concat block inputs & hash, return hash as string
 func calculateHash(block Block) string {
 	record := string(block.Index) + block.Timestamp + string(block.Logline) + block.PrevHash
 	h := sha256.New()
@@ -54,7 +55,7 @@ func calculateHash(block Block) string {
 	return hex.EncodeToString(hashed)
 }
 
-/* Gen new block: take calculated hash, add to new block */
+// Gen new block: take calculated hash, add to new block
 func generateBlock(oldBlock Block, Logline string) (Block, error) {
 	var newBlock Block
 	t := time.Now()
@@ -66,7 +67,7 @@ func generateBlock(oldBlock Block, Logline string) (Block, error) {
 	return newBlock, nil
 }
 
-/* Verify block contents */
+// Verify block contents
 func isBlockValid(newBlock, oldBlock Block) bool {
 	if oldBlock.Index+1 != newBlock.Index {
 		return false
@@ -83,14 +84,14 @@ func isBlockValid(newBlock, oldBlock Block) bool {
 	return true
 }
 
-/* Resolve competing blocks; whoever's chain is longer wins */
+// Resolve competing blocks; whoever's chain is longer wins
 func replaceChain(newBlocks []Block) {
 	if len(newBlocks) > len(Blockchain) {
 		Blockchain = newBlocks
 	}
 }
 
-/* Set up the webserver to listen for new entries */
+// Set up the webserver to listen for new entries
 func run() error {
 	mux := makeMuxRouter()
 	httpAddr := os.Getenv("ADDR")
@@ -162,4 +163,11 @@ func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload i
 	}
 	w.WriteHeader(code)
 	w.Write(response)
+}
+
+// Well, we've gotta put it somewhere. Why not Elasticsearch?
+func writeToElasticsearch(block Block) {
+	client, err := elastic.NewClient()
+	if err != nil {
+	}
 }
