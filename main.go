@@ -1,6 +1,7 @@
-package loggos
+package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,12 +9,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 )
 
 type Block struct {
@@ -48,7 +50,7 @@ func main() {
 
 // Calculate new hash: concat block inputs & hash, return hash as string
 func calculateHash(block Block) string {
-	record := string(block.Index) + block.Timestamp + string(block.Logline) + block.PrevHash
+	record := strconv.Itoa(block.Index) + block.Timestamp + block.Logline + block.PrevHash
 	h := sha256.New()
 	h.Write([]byte(record))
 	hashed := h.Sum(nil)
@@ -148,6 +150,7 @@ func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
 		newBlockchain := append(Blockchain, newBlock)
 		replaceChain(newBlockchain)
 		spew.Dump(Blockchain)
+		writeToElasticsearch(newBlock)
 	}
 
 	respondWithJSON(w, r, http.StatusCreated, newBlock)
@@ -167,7 +170,18 @@ func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload i
 
 // Well, we've gotta put it somewhere. Why not Elasticsearch?
 func writeToElasticsearch(block Block) {
-	client, err := elastic.NewClient()
+	esURL := os.Getenv("ELASTICSEARCH_URL")
+	if esURL == "" {
+		esURL = "http://localhost:9200"
+	}
+	client, err := elastic.NewClient(elastic.SetURL(esURL))
 	if err != nil {
+		log.Printf("error creating Elasticsearch client: %v", err)
+		return
+	}
+
+	_, err = client.Index().Index("loggos").BodyJson(block).Do(context.Background())
+	if err != nil {
+		log.Printf("error indexing block: %v", err)
 	}
 }
