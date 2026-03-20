@@ -1,10 +1,5 @@
 # Binaries
 loggos
-
-# Dependency directories
-/vendor/
-
-# Go build output
 *.exe
 *.exe~
 *.dll
@@ -13,3 +8,21 @@ loggos
 
 # Build artifacts
 *.test
+*.out
+
+# Dependency directories
+/vendor/
+
+# Environment files (contain secrets)
+.env
+
+# IDE / editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
